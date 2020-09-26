@@ -1,11 +1,6 @@
 <template>
-  <div class="notepad" spellcheck="false">
+  <div class="notepad" ref="notepad" :class="{ '--nightmode': nightMode }">
     <div class="head">
-      <!-- <div
-        class="title border"
-        contenteditable="true"
-        data-placeholder="शीर्षक"
-      ></div> -->
       <div class="date">{{ dateToday }}</div>
     </div>
 
@@ -24,7 +19,7 @@
         class="inputTool"
         ref="inputTool"
         :style="inputToolCss"
-        v-if="inputTool.inputText"
+        v-show="inputTool.inputText"
       >
         <div class="suggestionsList">
           <div
@@ -53,10 +48,10 @@
 </template>
 
 <script>
-// import { mapFields } from "vuex-map-fields";
 import adbs from "ad-bs-converter";
 import getCaretCoordinates from "textarea-caret";
 import axios from "axios";
+import { mapFields } from "vuex-map-fields";
 
 export default {
   name: "Notepad",
@@ -80,6 +75,7 @@ export default {
         loading: false,
         numSuggestions: 5,
         timer: null,
+        alignment: false, //true: right, false: left
       },
     };
   },
@@ -97,19 +93,17 @@ export default {
 
     handleKeyUp() {
       let searchSpace = this.text;
-      this.inputTool.inputText = searchSpace.substr(
-        searchSpace.lastIndexOf(" ") + 1,
-        this.$refs.textarea.selectionStart
-      );
-
-      // get suggestion after XXX milliseconds when key is pressed
-      // clearTimeout(this.suggestionTimer);
-      // this.suggestionTimer = setTimeout(() => {
-      //   this.getSuggestions();
-      //   clearTimeout(this.suggestionTimer);
-      // }, 250);
-
+      this.inputTool.inputText = searchSpace
+        .substr(
+          searchSpace.lastIndexOf(" ") + 1,
+          this.$refs.textarea.selectionStart
+        )
+        .trim();
       this.getSuggestions();
+      console.log(
+        this.$refs.textarea.selectionStart,
+        this.$refs.textarea.selectionEnd
+      );
     },
 
     handleKeyDown(e) {
@@ -178,70 +172,58 @@ export default {
     },
 
     getSuggestions() {
-      if (
+      let conditionToProceed =
         this.inputTool.inputText != this.inputTool.lastInputText &&
-        this.inputTool.inputText &&
-        this.inputTool.inputText.length > 0
-      ) {
-        if (this.cancelTokenSource)
-          this.cancelTokenSource.cancel(
-            "Operation cancelled due to new request"
-          );
-        this.inputTool.loading = true;
-        let url = `https://inputtools.google.com/request?text=${this.inputTool.inputText}&itc=ne-t-i0-und&num=${this.inputTool.numSuggestions}&cp=0&cs=1&ie=utf-8&oe=utf-8`;
-        const CancelToken = axios.CancelToken;
-        this.cancelTokenSource = CancelToken.source();
+        this.inputTool.inputText;
+      if (!conditionToProceed) return;
+      if (this.cancelTokenSource) this.cancelTokenSource.cancel();
 
-        console.log(this.inputTool.inputText);
+      this.inputTool.loading = true;
+      this.generateCancelTokenSource();
+      let url = `https://inputtools.google.com/request?text=${this.inputTool.inputText}&itc=ne-t-i0-und&num=${this.inputTool.numSuggestions}&cp=0&cs=1&ie=utf-8&oe=utf-8`;
 
-        axios
-          .post(url, null, {
-            cancelToken: this.cancelTokenSource.token,
-          })
-          .then((resp) => {
-            if (resp.data[0] == "SUCCESS") {
-              this.inputTool.suggestions = resp.data[1][0][1];
+      axios
+        .post(url, null, { cancelToken: this.cancelTokenSource.token })
+        .then(this.handleSuggestionsResponse)
+        .catch(() => {});
+    },
 
-              // handle full stop
-              if (this.inputTool.suggestions.includes("."))
-                this.inputTool.suggestions.unshift("।");
+    handleSuggestionsResponse(resp) {
+      if (resp.data[0] == "SUCCESS") {
+        this.inputTool.suggestions = resp.data[1][0][1];
 
-              this.inputTool.selectedSuggestionIndex = 0;
-              this.inputTool.lastInputText = this.inputTool.inputText;
-            }
-            this.inputTool.loading = false;
-          })
-          .catch((error) => {
-            console.log("Error ", error);
-          });
+        // handle full stop
+        if (this.inputTool.suggestions.includes("."))
+          this.inputTool.suggestions.unshift("।");
 
-        // try {
-        //   let resp = await axios.post(url, null, {
-        //     cancelToken: this.cancelTokenSource.token,
-        //   });
-        //   if (resp.data[0] == "SUCCESS") {
-        //     this.inputTool.suggestions = resp.data[1][0][1];
+        this.inputTool.selectedSuggestionIndex = 0;
+        this.inputTool.lastInputText = this.inputTool.inputText;
 
-        //     // handle full stop
-        //     if (this.inputTool.suggestions.includes("."))
-        //       this.inputTool.suggestions.unshift("।");
-
-        //     this.inputTool.selectedSuggestionIndex = 0;
-        //     this.inputTool.lastInputText = this.inputTool.inputText;
-        //   }
-        // } catch (e) {
-        //   console.log(e);
-        // }
-        // this.inputTool.loading = false;
+        // this.inputTool.alignment =
+        //   this.$refs.inputTool.getBoundingClientRect().left -
+        //     this.$refs.notepad.getBoundingClientRect().left -
+        //     22 <
+        //   0;
       }
+      this.inputTool.loading = false;
+    },
+
+    generateCancelTokenSource() {
+      const CancelToken = axios.CancelToken;
+      this.cancelTokenSource = CancelToken.source();
     },
   },
 
   computed: {
+    ...mapFields({
+      nightMode: "config.nightMode",
+    }),
+
     dateToday() {
       var d = new Date();
-      let bs = adbs.ad2bs(`${d.getFullYear()}/${d.getMonth()}/${d.getDay()}`)
-        .ne;
+      let bs = adbs.ad2bs(
+        `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`
+      ).ne;
       return `${bs.strMonth} ${bs.day} गते, ${bs.strDayOfWeek}`;
     },
 
@@ -250,6 +232,7 @@ export default {
         left: ${this.inputTool.x || -10000}px;
         top: ${this.inputTool.y}px;
       `;
+      // ${this.inputTool.alignment ? "" : "transform: translate(-100%, 0%);"}
     },
   },
 };
@@ -266,26 +249,63 @@ export default {
   width: 50%;
   min-width: 700px;
   border-radius: 10px;
-  padding: 1.3rem;
+  padding: 22px;
   font-family: "Mukta", sans-serif;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  color: #373737;
-
+  color: $dark-1;
   display: flex;
   flex-direction: column;
+  transition: all 0.2s ease-in-out;
+
+  &.--nightmode {
+    background-color: $dark-1;
+    color: whitesmoke;
+    box-shadow: none;
+
+    .head {
+      .date {
+        color: $dark-2;
+
+        &:hover {
+          color: $dark-3;
+        }
+      }
+    }
+
+    .body {
+      textarea {
+        background-color: $dark-1;
+        color: whitesmoke;
+        caret-color: whitesmoke;
+      }
+
+      .inputTool {
+        .suggestionsList {
+          box-shadow: none;
+
+          .suggestionsListItem {
+            background-color: $dark-2;
+            &.--selected {
+              background-color: black;
+            }
+          }
+        }
+      }
+    }
+  }
+
   .head {
     display: flex;
     justify-content: flex-end;
     .date {
       font-size: 14px;
-      color: #e5e5e5;
-      align-self: center;
+      color: $dark-3;
       cursor: default;
-      transition: all 0.2s ease;
+      @include not-selectable;
 
       &:hover {
-        color: #8a8989;
+        color: $dark-2;
       }
     }
   }
@@ -300,40 +320,39 @@ export default {
     textarea {
       width: 100%;
       font-size: 1.2rem;
-      caret-color: #373737;
-      color: #373737;
+      caret-color: $dark-1;
+      color: $dark-1;
       font-family: "Mukta", sans-serif;
       border: none;
       resize: none;
       outline: none;
+      @include transition;
     }
 
     .inputTool {
       position: absolute;
-      transform: translate(-100%, 0%);
       margin-top: 33px;
-    }
-  }
-}
 
-.suggestionsList {
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      .suggestionsList {
+        display: flex;
+        flex-direction: column;
+        @include shadow;
 
-  .suggestionsListItem {
-    padding: 0.25rem 1rem;
-    cursor: default;
+        .suggestionsListItem {
+          padding: 0.25rem 1rem;
+          cursor: default;
 
-    &.--selected {
-      background-color: whitesmoke;
-    }
+          &.--selected {
+            background-color: whitesmoke;
+          }
 
-    &.--loading {
-      display: flex;
-      justify-content: center;
-      padding: 0.5rem 1rem;
+          &.--loading {
+            display: flex;
+            justify-content: center;
+            padding: 0.5rem 1rem;
+          }
+        }
+      }
     }
   }
 }

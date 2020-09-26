@@ -7,7 +7,9 @@ Vue.use(Vuex);
 export default new Vuex.Store({
   state: {
     config: {
-      backgroundColor: '#80CBC4'
+      nightMode: false,
+      fullScreen: false,
+      backgroundColor: "#80CBC4",
     },
   },
   getters: {
