@@ -39,7 +39,7 @@
             {{ suggestion }}
           </div>
 
-          <div class="suggestionListItem" v-if="inputTool.loading">
+          <div class="suggestionsListItem --loading" v-if="inputTool.loading">
             <div class="loading">
               <div class="dot --one"></div>
               <div class="dot --two"></div>
@@ -67,6 +67,8 @@ export default {
   data() {
     return {
       text: null,
+      cancelTokenSource: null,
+      suggestionTimer: null,
       inputTool: {
         active: false,
         x: null,
@@ -99,6 +101,13 @@ export default {
         searchSpace.lastIndexOf(" ") + 1,
         this.$refs.textarea.selectionStart
       );
+
+      // get suggestion after XXX milliseconds when key is pressed
+      // clearTimeout(this.suggestionTimer);
+      // this.suggestionTimer = setTimeout(() => {
+      //   this.getSuggestions();
+      //   clearTimeout(this.suggestionTimer);
+      // }, 250);
 
       this.getSuggestions();
     },
@@ -168,30 +177,62 @@ export default {
       }
     },
 
-    async getSuggestions() {
+    getSuggestions() {
       if (
-        !this.inputTool.loading &&
-        this.inputTool.inputText != this.inputTool.lastInputText
+        this.inputTool.inputText != this.inputTool.lastInputText &&
+        this.inputTool.inputText &&
+        this.inputTool.inputText.length > 0
       ) {
+        if (this.cancelTokenSource)
+          this.cancelTokenSource.cancel(
+            "Operation cancelled due to new request"
+          );
         this.inputTool.loading = true;
         let url = `https://inputtools.google.com/request?text=${this.inputTool.inputText}&itc=ne-t-i0-und&num=${this.inputTool.numSuggestions}&cp=0&cs=1&ie=utf-8&oe=utf-8`;
+        const CancelToken = axios.CancelToken;
+        this.cancelTokenSource = CancelToken.source();
 
-        try {
-          let resp = await axios.post(url);
-          if (resp.data[0] == "SUCCESS") {
-            this.inputTool.suggestions = resp.data[1][0][1];
+        console.log(this.inputTool.inputText);
 
-            // handle full stop
-            if (this.inputTool.suggestions.includes("."))
-              this.inputTool.suggestions.unshift("।");
+        axios
+          .post(url, null, {
+            cancelToken: this.cancelTokenSource.token,
+          })
+          .then((resp) => {
+            if (resp.data[0] == "SUCCESS") {
+              this.inputTool.suggestions = resp.data[1][0][1];
 
-            this.inputTool.selectedSuggestionIndex = 0;
-            this.inputTool.lastInputText = this.inputTool.inputText;
-          }
-        } catch (e) {
-          console.log(e);
-        }
-        this.inputTool.loading = false;
+              // handle full stop
+              if (this.inputTool.suggestions.includes("."))
+                this.inputTool.suggestions.unshift("।");
+
+              this.inputTool.selectedSuggestionIndex = 0;
+              this.inputTool.lastInputText = this.inputTool.inputText;
+            }
+            this.inputTool.loading = false;
+          })
+          .catch((error) => {
+            console.log("Error ", error);
+          });
+
+        // try {
+        //   let resp = await axios.post(url, null, {
+        //     cancelToken: this.cancelTokenSource.token,
+        //   });
+        //   if (resp.data[0] == "SUCCESS") {
+        //     this.inputTool.suggestions = resp.data[1][0][1];
+
+        //     // handle full stop
+        //     if (this.inputTool.suggestions.includes("."))
+        //       this.inputTool.suggestions.unshift("।");
+
+        //     this.inputTool.selectedSuggestionIndex = 0;
+        //     this.inputTool.lastInputText = this.inputTool.inputText;
+        //   }
+        // } catch (e) {
+        //   console.log(e);
+        // }
+        // this.inputTool.loading = false;
       }
     },
   },
@@ -290,8 +331,9 @@ export default {
     }
 
     &.--loading {
-      position: relative;
-      animation: loadingAnim 0.5s infinite;
+      display: flex;
+      justify-content: center;
+      padding: 0.5rem 1rem;
     }
   }
 }
