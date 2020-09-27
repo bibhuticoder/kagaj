@@ -4,7 +4,7 @@
     <div class="palette" v-if="active">
       <div
         class="colorItem"
-        :class="{'--selected': color === backgroundColor}"
+        :class="{ '--selected': color === backgroundColor }"
         v-for="(color, index) in colors"
         :key="index"
         :style="'background-color: ' + color"
@@ -84,10 +84,7 @@ export default {
     min-width: 200px;
     border-radius: 5px;
     background-color: $white;
-    transform: translate(
-      calc(-100% + #{$size}),
-      calc(-100% - #{$size} - 8px)
-    );
+    transform: translate(calc(-100% + #{$size}), calc(-100% - #{$size} - 8px));
     padding: 0.25rem;
     display: flex;
     flex-wrap: wrap;
@@ -102,7 +99,7 @@ export default {
       margin: 0.25rem;
       border: 1px solid $white;
 
-      &.--selected{
+      &.--selected {
         border-color: $dark-1;
       }
     }

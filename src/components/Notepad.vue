@@ -44,6 +44,10 @@
         </div>
       </div>
     </div>
+
+    <div class="footer">
+      <div class="wordCount">{{ wordsCount }}</div>
+    </div>
   </div>
 </template>
 
@@ -52,6 +56,7 @@ import adbs from "ad-bs-converter";
 import getCaretCoordinates from "textarea-caret";
 import axios from "axios";
 import { mapFields } from "vuex-map-fields";
+import { toNpNum } from "@/utils";
 
 export default {
   name: "Notepad",
@@ -61,7 +66,6 @@ export default {
 
   data() {
     return {
-      text: null,
       cancelTokenSource: null,
       suggestionTimer: null,
       inputTool: {
@@ -92,7 +96,8 @@ export default {
     },
 
     handleKeyUp() {
-      let searchSpace = this.text;
+      let searchSpace = this.text.substr(0, this.$refs.textarea.selectionStart);
+
       this.inputTool.inputText = searchSpace
         .substr(
           searchSpace.lastIndexOf(" ") + 1,
@@ -100,10 +105,6 @@ export default {
         )
         .trim();
       this.getSuggestions();
-      console.log(
-        this.$refs.textarea.selectionStart,
-        this.$refs.textarea.selectionEnd
-      );
     },
 
     handleKeyDown(e) {
@@ -153,21 +154,32 @@ export default {
     },
 
     appendText(index = this.inputTool.selectedSuggestionIndex) {
-      if (
-        this.text &&
-        this.inputTool.suggestions &&
-        this.inputTool.suggestions.length
-      ) {
+      if (this.text && this.inputTool.suggestions.length) {
+        let searchSpace = this.text.substr(
+          0,
+          this.$refs.textarea.selectionStart
+        );
+        let s = this.$refs.textarea.selectionStart;
         this.text =
-          this.text.substr(0, this.text.lastIndexOf(" ")) +
+          this.text.substr(0, searchSpace.lastIndexOf(" ")) +
           " " +
           this.inputTool.suggestions[index] +
-          " ";
+          " " +
+          this.text.substr(
+            this.$refs.textarea.selectionStart,
+            this.text.length - 1
+          );
+
+        // save translation to memory
+        this.memory[this.inputTool.inputText] = this.inputTool.suggestions[
+          index
+        ];
 
         this.inputTool.inputText = null;
         this.inputTool.suggestions = [];
         this.inputTool.selectedSuggestionIndex = 0;
-        this.$refs.textarea.focus();
+        // this.$refs.textarea.focus();
+        this.$refs.textarea.selectionEnd = s;
       }
     },
 
@@ -184,26 +196,28 @@ export default {
 
       axios
         .post(url, null, { cancelToken: this.cancelTokenSource.token })
-        .then(this.handleSuggestionsResponse)
+        .then((resp) =>
+          this.handleSuggestionsResponse(resp, this.inputTool.inputText)
+        )
         .catch(() => {});
     },
 
-    handleSuggestionsResponse(resp) {
+    handleSuggestionsResponse(resp, inputText) {
       if (resp.data[0] == "SUCCESS") {
         this.inputTool.suggestions = resp.data[1][0][1];
 
-        // handle full stop
+        // full stop
         if (this.inputTool.suggestions.includes("."))
           this.inputTool.suggestions.unshift("।");
 
+        // untranslated text
+        if (this.inputTool.suggestions.length === 0)
+          this.inputTool.suggestions.push(inputText);
+
         this.inputTool.selectedSuggestionIndex = 0;
         this.inputTool.lastInputText = this.inputTool.inputText;
-
-        // this.inputTool.alignment =
-        //   this.$refs.inputTool.getBoundingClientRect().left -
-        //     this.$refs.notepad.getBoundingClientRect().left -
-        //     22 <
-        //   0;
+      } else if (resp.data[0] == "FAILED_TO_PARSE_REQUEST_BODY") {
+        this.inputTool.suggestions.push(inputText);
       }
       this.inputTool.loading = false;
     },
@@ -217,6 +231,8 @@ export default {
   computed: {
     ...mapFields({
       nightMode: "config.nightMode",
+      text: "text",
+      memory: "memory",
     }),
 
     dateToday() {
@@ -234,6 +250,20 @@ export default {
       `;
       // ${this.inputTool.alignment ? "" : "transform: translate(-100%, 0%);"}
     },
+
+    wordsCount() {
+      if (!this.text) return "";
+
+      let count = this.text
+        .trim()
+        .split(" ")
+        .filter((word) => !`!()-[]{};:'",<>./?@#$%^&*_~।`.includes(word))
+        .length;
+      let countNp = toNpNum(count);
+      if (count === 0) return "";
+      else if (count === 1) return `${countNp} वटा शब्द`;
+      return `${countNp} वटा शब्दहरु`;
+    },
   },
 };
 </script>
@@ -250,6 +280,7 @@ export default {
   min-width: 700px;
   border-radius: 10px;
   padding: 22px;
+  padding-bottom: 10px;
   font-family: "Mukta", sans-serif;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -290,6 +321,16 @@ export default {
               background-color: black;
             }
           }
+        }
+      }
+    }
+
+    .footer {
+      .wordCount {
+        color: $dark-2;
+
+        &:hover {
+          color: $dark-3;
         }
       }
     }
@@ -352,6 +393,22 @@ export default {
             padding: 0.5rem 1rem;
           }
         }
+      }
+    }
+  }
+
+  .footer {
+    display: flex;
+    justify-content: flex-end;
+
+    .wordCount {
+      font-size: 14px;
+      color: $dark-3;
+      cursor: default;
+      @include not-selectable;
+
+      &:hover {
+        color: $dark-2;
       }
     }
   }
