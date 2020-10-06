@@ -22,6 +22,9 @@
         v-show="inputTool.inputText"
       >
         <div class="suggestionsList">
+          <div class="suggestionsListItem --cache" v-if="inputTool.selectedSuggestionCache">
+            {{ inputTool.selectedSuggestionCache }}
+          </div>
           <div
             class="suggestionsListItem"
             v-for="(suggestion, index) in inputTool.suggestions"
@@ -76,6 +79,7 @@ export default {
         lastInputText: null,
         suggestions: [],
         selectedSuggestionIndex: null,
+        selectedSuggestionCache: null,
         loading: false,
         numSuggestions: 5,
         timer: null,
@@ -174,6 +178,7 @@ export default {
         this.memory[this.inputTool.inputText] = this.inputTool.suggestions[
           index
         ];
+        this.inputTool.selectedSuggestionCache = null;
 
         this.inputTool.inputText = null;
         this.inputTool.suggestions = [];
@@ -213,6 +218,9 @@ export default {
         // untranslated text
         if (this.inputTool.suggestions.length === 0)
           this.inputTool.suggestions.push(inputText);
+
+        // cache
+        this.inputTool.selectedSuggestionCache = this.memory[inputText];
 
         this.inputTool.selectedSuggestionIndex = 0;
         this.inputTool.lastInputText = this.inputTool.inputText;
@@ -320,6 +328,10 @@ export default {
             &.--selected {
               background-color: black;
             }
+
+            &.--cache {
+              color: yellow;
+            }
           }
         }
       }
@@ -354,7 +366,7 @@ export default {
   .body {
     position: relative;
     flex: 1;
-    margin-top: 1rem;
+    margin-top: 1 मेरो घर मा सब जना आराम होइसिन्छ   rem;
     overflow-y: auto;
     overflow-x: hidden;
 
@@ -391,6 +403,10 @@ export default {
             display: flex;
             justify-content: center;
             padding: 0.5rem 1rem;
+          }
+
+          &.--cache {
+            background-color: yellow;
           }
         }
       }
