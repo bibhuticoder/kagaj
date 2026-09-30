@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import axios from 'axios';
 import getCaretCoordinates from 'textarea-caret';
 import { useAppStore } from '@/store/useAppStore';
+import { offlineEngine } from '@/utils';
 
 export interface TransliterationState {
   active: boolean;
@@ -15,6 +16,7 @@ export interface TransliterationState {
 }
 
 const PUNCTUATION_REGEX = /[!()[\]{};:'",<>/?@#$%^&*_~।॥\n\r\t]/;
+const API_DEBOUNCE_MS = 250; // Delay API call by 250ms; if typing continues, previous request is cancelled
 
 export function useTransliteration(
   textareaRef: React.RefObject<HTMLTextAreaElement | null>
@@ -32,8 +34,28 @@ export function useTransliteration(
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFetchedWordRef = useRef<string>('');
   const lastCaretPosRef = useRef<number>(0);
+
+  // Sync memory dictionary into offlineEngine
+  useEffect(() => {
+    if (memory && Object.keys(memory).length > 0) {
+      offlineEngine.loadCustomLexicon(memory);
+    }
+  }, [memory]);
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   // Auto expand textarea height to fit content smoothly
   const autoExpand = useCallback(() => {
@@ -55,14 +77,16 @@ export function useTransliteration(
     }));
   }, [textareaRef]);
 
-  // Fetch suggestions from Google Input Tools API
+  // Fetch suggestions: immediate offline suggestions + debounced background Google API call
   const fetchSuggestions = useCallback(
-    async (wordToTranslate: string) => {
+    (wordToTranslate: string) => {
       if (!config.autoTransliterate) return;
 
       const trimmed = wordToTranslate.trim();
       if (!trimmed || trimmed === lastFetchedWordRef.current) {
         if (!trimmed) {
+          if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+          if (abortControllerRef.current) abortControllerRef.current.abort();
           setState((prev) => ({
             ...prev,
             active: false,
@@ -76,86 +100,114 @@ export function useTransliteration(
 
       // Check if word contains any delimiter or punctuation
       if (PUNCTUATION_REGEX.test(trimmed)) {
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        if (abortControllerRef.current) abortControllerRef.current.abort();
         setState((prev) => ({ ...prev, active: false, suggestions: [] }));
         return;
       }
 
-      // Cancel ongoing request
+      // 1. Clear any pending debounce timer & abort any ongoing API request
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
-      abortControllerRef.current = new AbortController();
 
       lastFetchedWordRef.current = trimmed;
       const lowerWord = trimmed.toLowerCase();
       const cached = memory[lowerWord] || null;
 
+      // 2. Generate immediate instant offline suggestions (0ms latency, no network)
+      const offlineCandidates = offlineEngine.getSuggestions(trimmed, 5);
+      if (cached && !offlineCandidates.includes(cached)) {
+        offlineCandidates.unshift(cached);
+      }
+      if (trimmed === '.' && !offlineCandidates.includes('।')) {
+        offlineCandidates.unshift('।');
+      }
+
+      // Show immediate offline candidates right away
       setState((prev) => ({
         ...prev,
         active: true,
         inputText: trimmed,
-        loading: true,
+        suggestions: offlineCandidates.length ? offlineCandidates : [trimmed],
+        selectedIndex: 0,
         selectedCache: cached,
+        loading: true,
       }));
 
-      try {
-        const url = `https://inputtools.google.com/request?text=${encodeURIComponent(
-          trimmed
-        )}&itc=ne-t-i0-und&num=5&cp=0&cs=1&ie=utf-8&oe=utf-8`;
+      // 3. Debounce the Google Input Tools API call
+      // If user types subsequent characters within API_DEBOUNCE_MS (250ms), this call is cancelled
+      debounceTimerRef.current = setTimeout(async () => {
+        abortControllerRef.current = new AbortController();
 
-        const response = await axios.post(url, null, {
-          signal: abortControllerRef.current.signal,
-        });
+        try {
+          const url = `https://inputtools.google.com/request?text=${encodeURIComponent(
+            trimmed
+          )}&itc=ne-t-i0-und&num=5&cp=0&cs=1&ie=utf-8&oe=utf-8`;
 
-        const data = response.data;
-        if (Array.isArray(data) && data[0] === 'SUCCESS') {
-          const rawSuggestions: string[] = data[1]?.[0]?.[1] || [];
-          const suggestions = [...rawSuggestions];
+          const response = await axios.post(url, null, {
+            signal: abortControllerRef.current.signal,
+            timeout: 2500, // Fast timeout for seamless offline fallback
+          });
 
-          // Handle purna biram if typing dot or punctuation
-          if (trimmed === '.' || suggestions.includes('.')) {
-            if (!suggestions.includes('।')) {
-              suggestions.unshift('।');
+          const data = response.data;
+          if (Array.isArray(data) && data[0] === 'SUCCESS') {
+            const apiSuggestions: string[] = data[1]?.[0]?.[1] || [];
+            const merged = [...apiSuggestions];
+
+            // Handle purna biram if typing dot
+            if (trimmed === '.' || merged.includes('.')) {
+              if (!merged.includes('।')) {
+                merged.unshift('।');
+              }
             }
-          }
 
-          if (suggestions.length === 0) {
-            suggestions.push(trimmed);
-          }
+            // Add any unique offline candidates
+            for (const cand of offlineCandidates) {
+              if (!merged.includes(cand)) {
+                merged.push(cand);
+              }
+            }
 
-          // If there's a cached word preference, prioritize it or mark it
-          let initialIndex = 0;
-          if (cached && suggestions.includes(cached)) {
-            initialIndex = suggestions.indexOf(cached);
-          }
+            if (merged.length === 0) {
+              merged.push(trimmed);
+            }
 
+            let initialIndex = 0;
+            if (cached && merged.includes(cached)) {
+              initialIndex = merged.indexOf(cached);
+            }
+
+            setState((prev) => ({
+              ...prev,
+              suggestions: merged.slice(0, 6),
+              selectedIndex: initialIndex,
+              selectedCache: cached,
+              loading: false,
+              active: true,
+            }));
+          } else {
+            // Keep offline candidates silently
+            setState((prev) => ({
+              ...prev,
+              loading: false,
+              active: true,
+            }));
+          }
+        } catch {
+          // When API fails, is aborted, or device is offline: silently keep offline candidates without showing any error
           setState((prev) => ({
             ...prev,
-            suggestions,
-            selectedIndex: initialIndex,
-            selectedCache: cached,
-            loading: false,
-            active: true,
-          }));
-        } else {
-          setState((prev) => ({
-            ...prev,
-            suggestions: [trimmed],
-            selectedIndex: 0,
             loading: false,
             active: true,
           }));
         }
-      } catch (err) {
-        if (!axios.isCancel(err)) {
-          setState((prev) => ({
-            ...prev,
-            loading: false,
-            // Keep fallback suggestion as current input text
-            suggestions: prev.suggestions.length ? prev.suggestions : [trimmed],
-          }));
-        }
-      }
+      }, API_DEBOUNCE_MS);
     },
     [config.autoTransliterate, memory]
   );
@@ -180,6 +232,16 @@ export function useTransliteration(
     (indexToApply?: number) => {
       const el = textareaRef.current;
       if (!el) return;
+
+      // Clear any pending debounce timer
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
 
       const activeIndex =
         typeof indexToApply === 'number' ? indexToApply : state.selectedIndex;
@@ -207,9 +269,11 @@ export function useTransliteration(
       const newText = `${prefix}${chosenWord} ${suffix}`;
       const newCursorPos = prefix.length + chosenWord.length + 1;
 
-      // Remember preference in store
+      // Remember preference in store and offline engine
       if (state.inputText.trim()) {
-        rememberWord(state.inputText.trim(), chosenWord);
+        const cleanRoman = state.inputText.trim().toLowerCase();
+        rememberWord(cleanRoman, chosenWord);
+        offlineEngine.trie.insert(cleanRoman, chosenWord, 100);
       }
 
       // Update store text
@@ -264,6 +328,8 @@ export function useTransliteration(
       if (currentWord) {
         fetchSuggestions(currentWord);
       } else {
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        if (abortControllerRef.current) abortControllerRef.current.abort();
         setState((prev) => ({
           ...prev,
           active: false,
@@ -305,6 +371,8 @@ export function useTransliteration(
           applySuggestion();
         }
       } else if (e.key === 'Escape') {
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        if (abortControllerRef.current) abortControllerRef.current.abort();
         setState((prev) => ({ ...prev, active: false }));
       }
     },
@@ -323,6 +391,8 @@ export function useTransliteration(
       if (currentWord) {
         fetchSuggestions(currentWord);
       } else {
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        if (abortControllerRef.current) abortControllerRef.current.abort();
         setState((prev) => ({ ...prev, active: false }));
       }
     }, 50);
