@@ -16,7 +16,11 @@ import { openInFullScreen, exitFullScreen, isFullscreenActive, getT } from '@/ut
 import { ColorPicker } from '@/components/ColorPicker/ColorPicker';
 import styles from './Toolbar.module.css';
 
-export const Toolbar: React.FC = () => {
+interface ToolbarProps {
+  onOpenClearModal?: () => void;
+}
+
+export const Toolbar: React.FC<ToolbarProps> = ({ onOpenClearModal }) => {
   const { config, toggleNightMode, setFullScreen, text, clearText, setAutoTransliterate } =
     useAppStore();
   const [copied, setCopied] = useState(false);
@@ -61,7 +65,9 @@ export const Toolbar: React.FC = () => {
 
   const handleClear = () => {
     if (!text) return;
-    if (window.confirm(t.clearConfirm)) {
+    if (onOpenClearModal) {
+      onOpenClearModal();
+    } else {
       clearText();
     }
   };

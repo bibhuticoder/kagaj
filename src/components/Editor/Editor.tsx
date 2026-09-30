@@ -6,11 +6,13 @@ import { useAppStore } from '@/store/useAppStore';
 import { getT } from '@/utils';
 import { Notepad } from '@/components/Notepad/Notepad';
 import { Toolbar } from '@/components/Toolbar/Toolbar';
+import { ClearConfirmModal } from '@/components/ClearConfirmModal/ClearConfirmModal';
 import styles from './Editor.module.css';
 
 export const Editor: React.FC = () => {
   const { config, text, clearText, toggleNightMode, setAutoTransliterate } = useAppStore();
   const [copied, setCopied] = useState(false);
+  const [clearModalOpened, setClearModalOpened] = useState(false);
 
   const isNepali = config.autoTransliterate;
   const t = useMemo(() => getT(isNepali), [isNepali]);
@@ -23,13 +25,6 @@ export const Editor: React.FC = () => {
       setTimeout(() => setCopied(false), 2000);
     } catch (e) {
       console.warn('Copy failed:', e);
-    }
-  };
-
-  const handleClear = () => {
-    if (!text) return;
-    if (window.confirm(t.clearConfirm)) {
-      clearText();
     }
   };
 
@@ -116,7 +111,7 @@ export const Editor: React.FC = () => {
             >
               <button
                 className={styles.actionBtn}
-                onClick={handleClear}
+                onClick={() => setClearModalOpened(true)}
                 aria-label={t.clearTooltip}
               >
                 <Trash2 size={16} />
@@ -131,7 +126,15 @@ export const Editor: React.FC = () => {
       <Notepad />
 
       {/* Floating Action Toolbar (Desktop Only) */}
-      <Toolbar />
+      <Toolbar onOpenClearModal={() => setClearModalOpened(true)} />
+
+      {/* Custom Clear Confirmation Modal */}
+      <ClearConfirmModal
+        opened={clearModalOpened}
+        onClose={() => setClearModalOpened(false)}
+        onConfirm={clearText}
+        isNepali={isNepali}
+      />
     </div>
   );
 };

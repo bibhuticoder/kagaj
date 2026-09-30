@@ -1,0 +1,118 @@
+.modalContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0.5rem 0.25rem 0.25rem;
+  font-family: var(--font-nepali);
+}
+
+.iconWrapper {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: rgba(250, 82, 82, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fa5252;
+  margin-bottom: 1.25rem;
+}
+
+.title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--text-light-primary);
+  line-height: 1.3;
+}
+
+:global(.mantine-Modal-root[data-color-scheme="dark"]) .title,
+.nightmode .title {
+  color: #f8f9fa;
+}
+
+.description {
+  font-size: 0.98rem;
+  color: var(--text-light-secondary);
+  line-height: 1.6;
+  margin-bottom: 1.75rem;
+  max-width: 320px;
+}
+
+:global(.mantine-Modal-root[data-color-scheme="dark"]) .description,
+.nightmode .description {
+  color: #b0b3b8;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.cancelBtn {
+  flex: 1;
+  height: 42px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: transparent;
+  color: var(--text-light-primary);
+  font-family: var(--font-nepali);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  outline: none;
+}
+
+.cancelBtn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.cancelBtn:active {
+  transform: scale(0.97);
+}
+
+:global(.mantine-Modal-root[data-color-scheme="dark"]) .cancelBtn,
+.nightmode .cancelBtn {
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #f8f9fa;
+}
+
+:global(.mantine-Modal-root[data-color-scheme="dark"]) .cancelBtn:hover,
+.nightmode .cancelBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.confirmBtn {
+  flex: 1;
+  height: 42px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: #fa5252;
+  color: #ffffff;
+  font-family: var(--font-nepali);
+  font-size: 1rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  outline: none;
+  box-shadow: 0 4px 12px rgba(250, 82, 82, 0.35);
+}
+
+.confirmBtn:hover {
+  background: #e03131;
+  box-shadow: 0 6px 16px rgba(250, 82, 82, 0.45);
+  transform: translateY(-1px);
+}
+
+.confirmBtn:active {
+  transform: scale(0.97);
+}
