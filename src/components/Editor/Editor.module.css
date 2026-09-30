@@ -129,8 +129,8 @@
   color: #74c0fc !important;
 }
 
-/* Mobile Responsive */
-@media (max-width: 768px) {
+/* Mobile & Tablet / iPad Responsive */
+@media (max-width: 1024px), (hover: none) and (pointer: coarse), (pointer: coarse) and (max-width: 1366px) {
   .editor {
     padding: 0;
     align-items: stretch;

@@ -156,8 +156,8 @@
   display: none;
 }
 
-/* Responsive Mobile Layout */
-@media (max-width: 768px) {
+/* Responsive Mobile & Tablet / iPad Layout */
+@media (max-width: 1024px), (hover: none) and (pointer: coarse), (pointer: coarse) and (max-width: 1366px) {
   .notepad {
     width: 100%;
     max-width: 100%;
@@ -174,7 +174,7 @@
     border: none;
   }
 
-  /* Remove header bar just above editor on mobile */
+  /* Remove header bar just above editor on mobile/tablet */
   .head {
     display: none !important;
   }
@@ -184,8 +184,8 @@
   }
 
   .textarea {
-    font-size: 1.15rem;
-    line-height: 1.6;
+    font-size: 1.2rem;
+    line-height: 1.65;
     min-height: 65vh;
   }
 
@@ -193,7 +193,7 @@
     display: none;
   }
 
-  /* Show date on left in footer on mobile */
+  /* Show date on left in footer on mobile/tablet */
   .footerDate {
     display: inline-flex;
   }

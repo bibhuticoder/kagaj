@@ -58,8 +58,8 @@
   margin: 0 2px;
 }
 
-/* Remove bottom toolbar on mobile devices */
-@media (max-width: 768px) {
+/* Remove bottom toolbar on mobile and tablet / iPad devices */
+@media (max-width: 1024px), (hover: none) and (pointer: coarse), (pointer: coarse) and (max-width: 1366px) {
   .toolbar {
     display: none !important;
   }

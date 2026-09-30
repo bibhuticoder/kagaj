@@ -7,7 +7,8 @@
 ## ✨ Features
 
 - 🇳🇵 **Instant Nepali Transliteration** — Type in Romanized Nepali (e.g., `namaste` → `नमस्ते`, `nepal` → `नेपाल`) with smart real-time suggestions.
-- ⚡ **Full Offline Support** — Built-in phonetic Finite State Machine (FSM) and Frequency-Weighted Lexicon Trie engine. Works 100% offline without needing an active internet connection.
+- ⚡ **100% Offline Support** — Includes a built-in phonetic Finite State Machine (FSM) and Frequency-Weighted Lexicon Trie engine. Works completely offline without requiring an active internet connection.
+- 🛡️ **Zero-Interruption Google API Fallback** — Uses Google Input Tools API for rich cloud suggestions when online, but if the API fails, gets blocked, or goes offline, Kagaj seamlessly falls back to the local offline engine without showing errors.
 - 📱 **Mobile-First Experience** — Built for frictionless mobile typing with quick thumb-accessible suggestion pills, locked zoom gestures, and clean UI navigation.
 - 🚫 **100% Ad-Free & Distraction-Free** — No popups, no trackers, no login required. Just open and write.
 - 📅 **Bikram Sambat (BS) Calendar** — Automatically displays today's Nepali date (e.g., `आश्विन १४ गते, बुधवार`) in Nepali mode and Gregorian date in English mode.
@@ -20,20 +21,21 @@
 
 ---
 
-## ⚡ Transliteration Architecture & Offline Engine
+## ⚡ Offline Support & Hybrid Transliteration
 
-Kagaj uses a resilient **Hybrid Transliteration Engine**:
+Kagaj is designed to be fully functional without relying on external servers. It uses a **Hybrid Transliteration Engine** combining instant local execution with cloud enrichment:
 
-1. **Instant Offline Engine (0ms Latency)**:
+1. **Instant Offline Engine (<1ms Latency)**:
    - **Phonetic Rule FSM**: Deterministically handles consonant conjuncts (`virama / ्`), independent vowels, dependent matras, numerals (`०-९`), Chandrabindu (`**`/`~n`), Anusvara (`*`), and Visarga (`:`).
    - **Lexicon Trie**: Resolves schwa deletions and common Roman colloquial spellings (`ramro` → `राम्रो`, `ghar` → `घर`, `tapaiko` → `तपाईंको`).
-   - **Dynamic Learning**: User-preferred words are cached in `localStorage` and dynamically indexed into the trie.
+   - **Dynamic Local Memory**: User-selected words are cached locally in your browser (`localStorage`) and dynamically prioritized in future suggestions.
 
-2. **Google Input Tools API Enrichment**:
-   - For additional vocabulary, debounced requests (250ms delay) are sent to Google's public endpoint.
+2. **Smart API Debouncing**:
+   - Cloud suggestion queries are debounced (250ms) to ensure minimal network traffic and smooth typing without redundant requests on fast keystrokes.
 
-3. **Resilient Offline Fallback**:
-   - **If the Google API is unreachable, rate-limited, blocked, or changed, the application seamlessly falls back to the built-in offline engine with zero errors or disruption.**
+3. **Seamless Google API Fallback**:
+   - **When online**: Kagaj fetches additional suggestions from the Google Input Tools API to enrich local suggestions.
+   - **When offline or if Google API fails**: If the API call times out, encounters network errors, gets blocked, or fails for any reason, Kagaj **silently falls back to the built-in offline engine**. Typing remains 100% functional with zero disruptions, popups, or error messages.
 
 ---
 
