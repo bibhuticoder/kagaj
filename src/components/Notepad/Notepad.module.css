@@ -1,0 +1,271 @@
+.notepad {
+  position: relative;
+  background-color: #ffffff;
+  width: 58%;
+  max-width: 860px;
+  min-width: 320px;
+  min-height: 75vh;
+  max-height: 88vh;
+  border-radius: var(--radius-lg);
+  padding: 1.75rem 2rem 1.25rem 2rem;
+  font-family: var(--font-nepali);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
+  color: #2b2b2b;
+  display: flex;
+  flex-direction: column;
+  transition: background-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+  overflow: hidden;
+}
+
+.nightmode {
+  background-color: #242526;
+  color: #f0f2f5;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  user-select: none;
+}
+
+.nightmode .head {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.dateBadge {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #6c757d;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.dateBadge svg {
+  flex-shrink: 0;
+  margin-top: -1px;
+}
+
+.dateBadge span {
+  display: inline-block;
+  line-height: 1;
+  padding-top: 1px;
+}
+
+.nightmode .dateBadge {
+  color: #909296;
+}
+
+.body {
+  position: relative;
+  flex: 1;
+  margin-top: 0.75rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+.textarea {
+  width: 100%;
+  font-size: 1.25rem;
+  line-height: 1.7;
+  caret-color: #1c7ed6;
+  color: #212529;
+  font-family: var(--font-nepali);
+  border: none;
+  resize: none;
+  outline: none;
+  background: transparent;
+  padding: 4px 0;
+  transition: color 0.2s ease;
+  min-height: 320px;
+}
+
+.nightmode .textarea {
+  color: #f1f3f5;
+  caret-color: #4dabf7;
+}
+
+.textarea::placeholder {
+  color: #adb5bd;
+  opacity: 0.7;
+}
+
+.nightmode .textarea::placeholder {
+  color: #5c5f66;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  user-select: none;
+  font-size: 0.88rem;
+  color: #868e96;
+}
+
+.nightmode .footer {
+  border-top-color: rgba(255, 255, 255, 0.08);
+  color: #909296;
+}
+
+.footerLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footerDate {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #6c757d;
+  line-height: 1;
+}
+
+.footerDate svg {
+  flex-shrink: 0;
+  margin-top: -1px;
+}
+
+.nightmode .footerDate {
+  color: #909296;
+}
+
+.wordCount {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.hint {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+/* Mobile Quick Bar for thumb-friendly suggestion tapping */
+.mobileSuggestionBar {
+  display: none;
+}
+
+/* Responsive Mobile Layout */
+@media (max-width: 768px) {
+  .notepad {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100%;
+    max-height: 100%;
+    height: 100%;
+    border-radius: 0;
+    padding: calc(3.5rem + env(safe-area-inset-top, 0px)) 1rem calc(1.25rem + env(safe-area-inset-bottom, 0px)) 1rem;
+    box-shadow: none;
+  }
+
+  .nightmode {
+    box-shadow: none;
+    border: none;
+  }
+
+  /* Remove header bar just above editor on mobile */
+  .head {
+    display: none !important;
+  }
+
+  .body {
+    margin-top: 0.25rem;
+  }
+
+  .textarea {
+    font-size: 1.15rem;
+    line-height: 1.6;
+    min-height: 65vh;
+  }
+
+  .hint {
+    display: none;
+  }
+
+  /* Show date on left in footer on mobile */
+  .footerDate {
+    display: inline-flex;
+  }
+
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 0.6rem;
+    padding-bottom: 0.25rem;
+  }
+
+  .wordCount {
+    margin-left: auto;
+    font-size: 0.85rem;
+  }
+
+  .mobileSuggestionBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    position: fixed;
+    bottom: calc(3rem + env(safe-area-inset-bottom, 0px));
+    left: 12px;
+    right: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: var(--radius-full);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    overflow-x: auto;
+    z-index: 45;
+  }
+
+  .nightmode .mobileSuggestionBar {
+    background: rgba(36, 37, 38, 0.95);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .mobilePill {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    font-size: 1.05rem;
+    font-family: var(--font-nepali);
+    border: none;
+    outline: none;
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--text-light-primary);
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .nightmode .mobilePill {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-dark-primary);
+  }
+
+  .mobilePill:active {
+    transform: scale(0.92);
+  }
+
+  .mobilePillActive {
+    background: #1c7ed6 !important;
+    color: #ffffff !important;
+  }
+
+  .nightmode .mobilePillActive {
+    background: #228be6 !important;
+    color: #ffffff !important;
+  }
+}
